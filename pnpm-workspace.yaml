@@ -61,3 +61,23 @@
 minimumReleaseAgeExclude:
   - '@civitai/sdk@0.5.0'
   - 'electron-to-chromium@1.5.439'
+
+# 🔴 A SECOND pnpm-12-only failure, found by CI on the very first run — and it was
+# INVISIBLE both locally and in the platform build.
+#
+# pnpm 12 makes an ignored dependency build script a hard `ERR_PNPM_IGNORED_BUILDS`
+# error. pnpm 10 — this host — prints the identical fact as a WARNING inside a box
+# and exits 0. The platform's own 0.1.0 build never revealed it either, because
+# `minimumReleaseAge` failed first and nothing downstream ran; fixing only that
+# would have bought one more moderator review cycle to discover this.
+#
+# `esbuild` needs its install script: it fetches/links the native binary that
+# `vite build` shells out to. Without it the build does not merely warn, it breaks.
+#
+# 🔴 THIS IS AN ALLOWLIST, AND THAT IS THE POINT. It permits exactly one package to
+# run install scripts. `dangerouslyAllowAllBuilds` sits next to it in pnpm's own
+# settings list and would permit ARBITRARY CODE from every transitive dependency at
+# install time — the same shape of mistake as `minimumReleaseAge: 0` above. Add a
+# package here only when its build genuinely must run, one name at a time.
+onlyBuiltDependencies:
+  - esbuild
