@@ -47,9 +47,23 @@ export function App({ platform }: { platform: Platform }) {
     }
   }, [platform]);
 
+  /**
+   * 🔴 RE-READ `/me` WHEN THE TOKEN CHANGES, NOT ONLY WHEN THE VIEWER DOES.
+   * Measured live 2026-09-25: granting consent rotated the token from `block` to
+   * `oauth` in the same session, the kind on screen updated (it is read from the
+   * snapshot on every render) — and the `/me` panel kept showing the refusal
+   * taken against the OLD token, whose text says "this block holds a
+   * block-scoped token". The screen contradicted itself, and the stale half was
+   * the one a reader would act on.
+   *
+   * `signedIn` alone cannot see this: it never changed. The dependency has to be
+   * the token's own identity, which is exactly what rotated.
+   */
+  const tokenIdentity = `${kind}|${[...platform.grantedScopes].sort().join(',')}`;
   useEffect(() => {
     if (platform.signedIn) void load();
-  }, [platform.signedIn, load]);
+    // `tokenIdentity` is the real trigger; `load` closes over `platform`.
+  }, [platform.signedIn, tokenIdentity, load]);
 
   const ask = useCallback(async () => {
     setGranting(true);
@@ -64,7 +78,7 @@ export function App({ platform }: { platform: Platform }) {
     <main className="probe">
       <h1>OAuth Probe</h1>
       <p className="verdict" data-testid="verdict">
-        {verdict(kind, platform.signedIn)}
+        {verdict(kind, platform.signedIn, withheld.length)}
       </p>
 
       <section>

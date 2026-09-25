@@ -111,6 +111,63 @@ describe('App', () => {
   });
 
   /**
+   * 🔴 THE PRODUCTION DEFECT: granting consent rotates the token from `block` to
+   * `oauth` in the SAME session, and the `/me` panel kept showing the refusal
+   * taken against the old token — text that reads "this block holds a
+   * block-scoped token" while the app held an OAuth one. The screen contradicted
+   * itself and the stale half was the one a reader would act on.
+   *
+   * `signedIn` never changes across that rotation, so it cannot be the trigger.
+   */
+  it('re-reads /me when the token rotates, even though signedIn never changes', async () => {
+    const me = vi
+      .fn<() => Promise<unknown>>()
+      .mockRejectedValueOnce(new Error('Unauthorized — this block holds a block-scoped token'))
+      .mockResolvedValue({
+        id: 1,
+        username: 'after-consent',
+        tokenScope: TOKEN_SCOPE_BITS.UserRead | TOKEN_SCOPE_BITS.BuzzRead,
+        subject: { type: 'oauth', id: 'client_1' },
+      });
+
+    /**
+     * 🔴 ONE OBJECT WITH GETTERS, RE-RENDERED — exactly what `main.tsx` does.
+     * An earlier version of this test built a SECOND platform object for the
+     * post-grant render and the guard's own mutant SURVIVED it: `load` is a
+     * useCallback keyed on `[platform]`, so a fresh object re-runs the effect
+     * through `load` whether or not the fix is present. The fake has to hold the
+     * object identity fixed and move only what the host actually moves.
+     */
+    let kind = 'block';
+    let granted: readonly string[] = [];
+    const platform: Platform = {
+      get tokenKind() {
+        return kind;
+      },
+      get grantedScopes() {
+        return granted;
+      },
+      expiresAt: new Date('2026-09-25T21:42:49.000Z'),
+      signedIn: true,
+      me,
+      requestGrants: vi.fn(async () => true),
+    };
+
+    const { rerender } = render(<App platform={platform} />);
+    await waitFor(() => expect(screen.getByTestId('me-error')).toBeTruthy());
+
+    // The grant lands: same viewer, same session, same object, new token.
+    kind = 'oauth';
+    granted = ['user:read:self', 'buzz:read:self'];
+    rerender(<App platform={platform} />);
+
+    await waitFor(() => expect(screen.getByTestId('me-username')).toHaveTextContent('after-consent'));
+    expect(me).toHaveBeenCalledTimes(2);
+    // The contradiction is gone, not merely joined by a second panel.
+    expect(screen.queryByTestId('me-error')).toBeNull();
+  });
+
+  /**
    * An absent profile field is NOT a withheld permission — `/api/v1/me` omits
    * `isModerator` for every non-moderator. The screen must keep saying the token
    * carries the scope.
