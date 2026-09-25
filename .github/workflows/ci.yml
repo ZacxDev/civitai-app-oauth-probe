@@ -1,0 +1,43 @@
+# 🔴 THIS WORKFLOW EXISTS BECAUSE A GREEN LOCAL RUN CANNOT SEE THE PLATFORM'S
+# INSTALL POLICY, AND 0.1.0's DEPLOY FAILED ON EXACTLY THAT.
+#
+# The platform build runs pnpm 12.6.0 and enforces `minimumReleaseAge`. This
+# repo's author host runs pnpm 10.28.1, which has no such policy — and pnpm 12
+# ships a NATIVE binary that NixOS cannot execute at all, so the tier is not
+# merely unused locally, it is unreachable. `pnpm test` and `pnpm run build` both
+# passed locally while `pnpm install --frozen-lockfile` was going to be refused
+# by the platform before a single test ran.
+#
+# CI is therefore the ONLY place that gate can fire before a submit. `install` is
+# a deliberate first step and is NOT `--no-frozen-lockfile`: reproducing the
+# platform's refusal is the whole point of running it here.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+        with:
+          # Must track the major the PLATFORM build uses, not the author's host.
+          # If these diverge, this job goes back to being decorative.
+          version: 12
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      # The step 0.1.0 died on. Keep it first, and keep it frozen.
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm run typecheck
+      - run: pnpm test
+      - run: pnpm run build
