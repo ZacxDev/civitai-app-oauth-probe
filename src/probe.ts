@@ -90,11 +90,27 @@ export function readMe(body: unknown): MeReading {
 }
 
 /**
- * The one-line verdict. It is stated against the manifest's own opt-in, so a
- * host that hands this app a block token reads as a FAILED opt-in rather than as
- * a normal day — which is the whole point of shipping it.
+ * The one-line verdict.
+ *
+ * 🔴 A BLOCK TOKEN HAS TWO CAUSES AND THEY ARE NOT THE SAME NEWS. Measured live
+ * 2026-09-25: the first run of this app reported "the opt-in did not take
+ * effect" while the platform was in fact behaving exactly as designed — an
+ * ungranted viewer makes the hub answer `consent_required`, and the host falls
+ * back to a block JWT carrying the consent signal (civitai#5129) and renders its
+ * "missing permissions" notice (civitai#5128). Consent then flipped the very same
+ * session to `oauth`.
+ *
+ * So `withheldCount` is load-bearing and must not be dropped: a block token with
+ * something still withheld is WAITING, and only a block token with nothing
+ * withheld is a failed opt-in. Reporting the first as the second accuses the
+ * platform of a defect it does not have — which, for an app whose entire purpose
+ * is to be believed about this, is the worst thing it can do.
  */
-export function verdict(kind: TokenKindReading, signedIn: boolean): string {
+export function verdict(
+  kind: TokenKindReading,
+  signedIn: boolean,
+  withheldCount: number
+): string {
   if (!signedIn) {
     return 'Signed out. The host mints an OAuth token only for a signed-in viewer, so there is nothing to probe yet.';
   }
@@ -102,7 +118,9 @@ export function verdict(kind: TokenKindReading, signedIn: boolean): string {
     case 'oauth':
       return 'The host honoured auth: "oauth" — this app holds an OAuth access token, which the public API accepts.';
     case 'block':
-      return 'The host sent an app token despite auth: "oauth". The opt-in did not take effect.';
+      return withheldCount > 0
+        ? 'Waiting on your consent. The host fell back to an app token because this app has permissions you have not granted yet — that is the designed path, not a failure. Grant them and the token becomes an OAuth one.'
+        : 'Every declared permission is granted and the host still sent an app token. The opt-in did not take effect.';
     case 'unknown':
       return 'The host sent no token kind. It predates the field, so which token this is cannot be read from the handshake.';
   }

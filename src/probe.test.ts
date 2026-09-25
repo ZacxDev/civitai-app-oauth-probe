@@ -142,22 +142,38 @@ describe('readMe', () => {
 });
 
 describe('verdict', () => {
-  it('states a block token under an oauth manifest as a FAILED opt-in', () => {
-    expect(verdict('block', true)).toContain('did not take effect');
+  /**
+   * 🔴 THE DISTINCTION THIS APP GOT WRONG IN PRODUCTION. A block token with
+   * something still withheld is the consent-required fallback working as
+   * designed (civitai#5129); only a block token with NOTHING withheld is a
+   * failed opt-in. The first run reported the former as the latter, which
+   * accuses the platform of a defect it does not have.
+   */
+  it('reads a block token WITH withheld scopes as waiting on consent, not as failure', () => {
+    const v = verdict('block', true, 2);
+    expect(v).toContain('Waiting on your consent');
+    expect(v).not.toContain('did not take effect');
   });
 
-  it('states an oauth token as the opt-in honoured', () => {
-    expect(verdict('oauth', true)).toContain('honoured');
+  it('reads a block token with NOTHING withheld as a genuinely failed opt-in', () => {
+    const v = verdict('block', true, 0);
+    expect(v).toContain('did not take effect');
+    expect(v).not.toContain('Waiting on your consent');
+  });
+
+  it('states an oauth token as the opt-in honoured, whatever is withheld', () => {
+    expect(verdict('oauth', true, 0)).toContain('honoured');
+    expect(verdict('oauth', true, 2)).toContain('honoured');
   });
 
   it('does not blame the opt-in for an unknown kind', () => {
-    const v = verdict('unknown', true);
+    const v = verdict('unknown', true, 1);
     expect(v).toContain('no token kind');
     expect(v).not.toContain('did not take effect');
   });
 
   it('says signed-out before it says anything about the token', () => {
-    expect(verdict('unknown', false)).toContain('Signed out');
-    expect(verdict('oauth', false)).toContain('Signed out');
+    expect(verdict('unknown', false, 0)).toContain('Signed out');
+    expect(verdict('oauth', false, 2)).toContain('Signed out');
   });
 });
