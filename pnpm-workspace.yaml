@@ -1,0 +1,63 @@
+# pnpm settings. This repo is a single package, not a workspace — the file exists
+# ONLY to carry the `minimumReleaseAgeExclude` below, which pnpm reads from here
+# and nowhere else.
+#
+# The key name was read out of pnpm 12.6.0's OWN native binary (`pnpm-native`),
+# not carried over from the pnpm-11 precedent in the sibling app repos: a wrong
+# config key fails in the QUIET direction — accepted silently, changing nothing —
+# and here that costs a whole moderator review cycle to discover.
+#
+# 🔴 A DELIBERATE, NARROW EXEMPTION FROM A SUPPLY-CHAIN CONTROL. READ BEFORE EXTENDING.
+#
+# pnpm enforces a 24-hour `minimumReleaseAge`: a lockfile entry for a version
+# published inside that window is REFUSED. It blunts third-party supply-chain
+# attacks — a compromised maintainer account publishing a malicious version — by
+# giving the ecosystem time to detect and yank it. The platform build runs
+# **pnpm 12.6.0**; this host's pnpm is 10.28.1, which has no such policy at all,
+# so the tier is structurally invisible locally (see `.github/workflows/ci.yml`,
+# which exists to make it visible before a submit rather than after one).
+#
+# 🔴 THE TWO ENTRIES ARE NOT THE SAME KIND OF DECISION, AND THE SECOND IS THE ONE
+# TO ARGUE WITH.
+#
+#   @civitai/sdk@0.5.0 — FIRST-PARTY, published from this org's own
+#   `civitai-app-starters` monorepo. The threat the window guards against, someone
+#   else's compromised release, does not apply to a version we cut ourselves. This
+#   is the same reasoning as the sibling repos' exemptions.
+#
+#   electron-to-chromium@1.5.439 — THIRD-PARTY (github.com/Kilian/electron-to-chromium),
+#   reached only as a transitive devDependency: @vitejs/plugin-react -> @babel/core
+#   -> @babel/helper-compilation-targets -> browserslist -> here. It is a build-time
+#   data table, never shipped in `dist/`. 🔴 The first-party argument above does NOT
+#   cover it, and nobody should pretend it does. Operator decision 2026-09-25, taken
+#   with that difference stated explicitly and with two alternatives on the table:
+#   wait ~10h55m for 0.5.0's own window to close, or pin `@civitai/sdk` back to
+#   0.4.0 and wait ~3h16m. Speed was chosen over both.
+#
+# 🔴 BOTH ARE PINNED TO AN EXACT VERSION ON PURPOSE. A bare package name would
+# exempt EVERY FUTURE RELEASE, forever and silently — including one cut by a
+# compromised token. Measured on the pnpm-11 precedent: pinning `@civitai/sdk@0.2.1`
+# instead left 0.2.0 still failing, so the version is load-bearing and this is not
+# a name match.
+#
+# 🔴 THE POLICY IS NOT DISABLED AND MUST NOT BE. It still runs and still verified
+# all 216 lockfile entries in the build that made this necessary; exactly two are
+# exempt. Do NOT "fix" a future violation with `minimumReleaseAge: 0` or by dropping
+# a version pin — that removes the protection from every dependency, forever, for
+# everyone after you.
+#
+# ⏳ EXPIRY IS A CLOCK, NOT A VERSION BUMP. Each entry became inert — not wrong,
+# inert — 24h after its own publish time. Written here because the sibling repos'
+# exemptions each carried a stated condition ("remove once the package moves past
+# X") that could never fire, and one of them was inert SEVEN MINUTES BEFORE the
+# commit that added it. Both below were re-checked as still-unmet immediately
+# before this file was committed.
+#
+#   @civitai/sdk@0.5.0            published 2026-09-25T06:00:14Z  inert after 2026-09-26T06:00:14Z
+#   electron-to-chromium@1.5.439  published 2026-09-24T22:04:51Z  inert after 2026-09-25T22:04:51Z
+#
+# DELETE THE WHOLE FILE after 2026-09-26T06:00:14Z. Nothing breaks when you do;
+# that is the point, and it is why it is easy to forget.
+minimumReleaseAgeExclude:
+  - '@civitai/sdk@0.5.0'
+  - 'electron-to-chromium@1.5.439'
