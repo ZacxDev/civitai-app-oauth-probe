@@ -4,9 +4,59 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>OAuth Probe</title>
+    <!--
+      🔴 INLINE ON PURPOSE. `src/styles.css` is imported from the entry MODULE, so it
+      does not exist at first paint — the moment this skeleton is the only thing on
+      screen. A skeleton styled from an external sheet is an unstyled skeleton.
+    -->
+    <style>
+      :root { color-scheme: light dark; }
+      body { margin: 0; font-family: system-ui, sans-serif; }
+      .boot { max-width: 44rem; margin: 0 auto; padding: 1.5rem 1rem; }
+      .boot__bar { height: 1.5rem; border-radius: 0.375rem; background: currentColor; opacity: 0.12; }
+      .boot__bar + .boot__bar { margin-top: 0.75rem; }
+      .boot__bar--title { width: 12rem; height: 2rem; margin-bottom: 1.25rem; }
+      .boot__bar--wide { width: 100%; }
+      .boot__bar--mid { width: 78%; }
+      .boot__bar--short { width: 46%; }
+      .boot__group { margin-top: 2rem; }
+      @media (prefers-reduced-motion: no-preference) {
+        .boot__bar { animation: boot-pulse 1.4s ease-in-out infinite; }
+        @keyframes boot-pulse { 0%, 100% { opacity: 0.09; } 50% { opacity: 0.18; } }
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <!--
+      🔴 #root IS NOT EMPTY, AND THAT IS LOAD-BEARING — not decoration.
+      `block.manifest.json` declares `bootSkeleton: true`, which tells the run host
+      to STAND DOWN its own loading veil because this app paints its own. Ship the
+      flag with an empty container and the viewer sees a blank iframe for the whole
+      load; the platform's `boot-skeleton-gate` refuses the build for exactly that,
+      and it refused 0.1.1.
+
+      The two must change together: if this markup ever goes away, drop
+      `bootSkeleton` from the manifest in the same commit. `src/bootSkeleton.test.ts`
+      pins the pair so they cannot drift apart silently.
+
+      React's `createRoot().render()` clears the container on first render, so this
+      is replaced rather than appended to.
+    -->
+    <div id="root">
+      <div class="boot" aria-busy="true" aria-label="Loading OAuth Probe">
+        <div class="boot__bar boot__bar--title"></div>
+        <div class="boot__bar boot__bar--wide"></div>
+        <div class="boot__group">
+          <div class="boot__bar boot__bar--mid"></div>
+          <div class="boot__bar boot__bar--wide"></div>
+          <div class="boot__bar boot__bar--short"></div>
+        </div>
+        <div class="boot__group">
+          <div class="boot__bar boot__bar--mid"></div>
+          <div class="boot__bar boot__bar--wide"></div>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
