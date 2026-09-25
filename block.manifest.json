@@ -1,0 +1,33 @@
+{
+  "$schema": "https://civitai.com/schemas/app-block/v1.json",
+  "blockId": "oauth-probe",
+  "version": "0.1.0",
+  "name": "OAuth Probe",
+  "tagline": "Shows which token this app holds, and what it may read.",
+  "description": "OAuth Probe is a diagnostic app. It reports, on screen, which kind of token the host handed it, which permissions that token carries, and exactly which fields the Civitai API returns for you.\n\nIt is the first app to declare `auth: \"oauth\"`, the manifest opt-in that asks the host for an OAuth access token instead of the usual short-lived app token. The two behave differently: an app token is accepted only by Civitai's app endpoints, while an OAuth token is also accepted by the public API. This app exists to show that difference working, rather than described.\n\nWhat it puts on screen: the token kind the host sent, its expiry, the permissions it was granted, and which of the permissions this app declared are still missing your consent. Then it reads your own profile from the public API and lists which fields came back — your username always, and your email, email-verified status and moderator flag only once you have agreed to share your account details.\n\nIf you have not agreed yet, the app says so and offers a button that asks for the permissions. Nothing is read until you say yes, and nothing is stored: the app keeps no data of its own, writes nothing to your account, generates nothing, and spends no Buzz.\n\nThis is a tool for the Civitai team to verify the permission flow end to end. It has no other function.",
+  "type": "block",
+  "auth": "oauth",
+  "scopes": ["user:read:self", "buzz:read:self"],
+  "scopeJustifications": {
+    "user:read:self": "Reads the viewer's own profile from /api/v1/me and reports which fields the API returned, which is the observation this app exists to make. It is also the mandatory baseline for an auth \"oauth\" app: the OAuth token unavoidably carries the matching bit, so a manifest that omits this scope can never mint one.",
+    "buzz:read:self": "Declared, not called. A second consent-gated permission is what makes the granted/withheld split on screen non-trivial — with only one declared scope the app cannot show a partial grant, which is the state this probe is built to make visible."
+  },
+  "page": {
+    "path": "/",
+    "title": "OAuth Probe",
+    "icon": "shield-lock"
+  },
+  "iframe": {
+    "minHeight": 520,
+    "maxHeight": 1600,
+    "resizable": true,
+    "sandbox": "allow-scripts"
+  },
+  "bootSkeleton": true,
+  "category": "utility",
+  "repository": "https://github.com/ZacxDev/civitai-app-oauth-probe",
+  "contentRating": "g",
+  "minApiVersion": "1.0",
+  "buildCommand": "pnpm run build",
+  "outputDir": "dist"
+}
