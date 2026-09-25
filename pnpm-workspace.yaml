@@ -74,10 +74,27 @@ minimumReleaseAgeExclude:
 # `esbuild` needs its install script: it fetches/links the native binary that
 # `vite build` shells out to. Without it the build does not merely warn, it breaks.
 #
-# 🔴 THIS IS AN ALLOWLIST, AND THAT IS THE POINT. It permits exactly one package to
+# 🔴 THE KEY IS `allowBuilds`, NOT `onlyBuiltDependencies`, AND GETTING THAT WRONG
+# COST A CI ROUND — in the quiet direction, exactly as the rule predicts. pnpm's own
+# CHANGELOG, on `approve-builds`:
+#
+#   "…removes `onlyBuiltDependencies`, `onlyBuiltDependenciesFile`,
+#    `neverBuiltDependencies`, and `ignoredBuiltDependencies` from
+#    `pnpm-workspace.yaml` when it writes `allowBuilds`. Those settings were
+#    replaced by `allowBuilds` in pnpm 11 and SILENTLY IGNORED since, so a
+#    workspace migrated from pnpm 10 kept them around LOOKING ACTIVE."
+#
+# `onlyBuiltDependencies` is still present in the pnpm 12 binary's settings list, so
+# grepping the binary for a plausible name is NOT sufficient — a retired key is still
+# a string in there. The discriminator was the changelog, and the observable was that
+# the install failed with the SAME error while the file parsed fine (the
+# `minimumReleaseAgeExclude` above took effect in the same run, which is what proved
+# the file was being read at all).
+#
+# 🔴 THIS IS AN ALLOWLIST, AND THAT IS THE POINT. It approves exactly one package to
 # run install scripts. `dangerouslyAllowAllBuilds` sits next to it in pnpm's own
 # settings list and would permit ARBITRARY CODE from every transitive dependency at
 # install time — the same shape of mistake as `minimumReleaseAge: 0` above. Add a
-# package here only when its build genuinely must run, one name at a time.
-onlyBuiltDependencies:
-  - esbuild
+# package here only when its build genuinely must run, one at a time, explicitly.
+allowBuilds:
+  esbuild: true
